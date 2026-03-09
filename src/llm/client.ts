@@ -54,3 +54,18 @@ async function chatCompletionOpenRouterFallback(messages: any[], tools?: any[]) 
         throw error;
     }
 }
+
+export async function transcribeAudio(fileStream: any): Promise<string> {
+    try {
+        const transcription = await groq.audio.transcriptions.create({
+            file: fileStream,
+            model: "whisper-large-v3",
+            response_format: "verbose_json",
+        });
+        return transcription.text;
+    } catch (error) {
+        console.error("Error transcribing audio with Groq:", error);
+        throw error;
+    }
+}
+
