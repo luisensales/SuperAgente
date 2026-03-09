@@ -1,0 +1,30 @@
+{
+  "name": "superagente",
+  "version": "1.0.0",
+  "description": "Un agente de IA personal usando Telegram.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test-firebase": "tsx src/test-firebase.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.3.1",
+    "firebase-admin": "^13.7.0",
+    "grammy": "^1.41.1",
+    "groq-sdk": "^0.37.0",
+    "openai": "^6.27.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

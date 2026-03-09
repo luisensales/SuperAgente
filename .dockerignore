@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+memory.db
+*.log
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+package-lock.json
+src/test-firebase.ts
+src/*.db
+firebase-key.json
+loginout.txt
+# Exclude the artifacts directory from the user's workspace if it exists
+.gemini
