@@ -428,40 +428,52 @@ export const writeDriveFileTool: Tool = {
     }
 };
 
-// --- Drive: Create Google Doc (Formatted) ---
+// --- Drive: Create or Update Google Doc (Formatted) ---
 export const createGoogleDocTool: Tool = {
-    name: "create_google_doc",
-    description: "Crea un Documento de Google (Google Doc) con formato (negritas, títulos, listas).",
+    name: "create_or_update_google_doc",
+    description: "Crea un nuevo Documento de Google o actualiza uno existente manteniendo el formato (negritas, títulos, listas).",
     parameters: {
         type: "object",
         properties: {
-            name: { type: "string", description: "Nombre del documento." },
+            name: { type: "string", description: "Nombre del documento (obligatorio para crear uno nuevo)." },
+            fileId: { type: "string", description: "ID del documento (obligatorio para actualizar uno existente)." },
             contentHtml: { type: "string", description: "Contenido del documento en formato HTML (puedes usar <b>, <h1>, <ul>, etc)." }
         },
-        required: ["name", "contentHtml"]
+        required: ["contentHtml"]
     },
-    execute: async ({ name, contentHtml }) => {
+    execute: async ({ name, fileId, contentHtml }) => {
         if (!await isAuthorized()) return "Error: Autorización requerida.";
 
         try {
             const auth = await getOAuth2Client();
             const drive = google.drive({ version: 'v3', auth });
 
-            // Al subir contenido como text/html y pedir el mimeType de Google Doc, Google lo convierte automáticamente
-            const res = await drive.files.create({
-                requestBody: {
-                    name: name,
-                    mimeType: 'application/vnd.google-apps.document',
-                },
-                media: {
-                    mimeType: 'text/html',
-                    body: contentHtml,
-                },
-            });
-
-            return `✅ Documento de Google Docs '${name}' creado con éxito (ID: ${res.data.id}). Ya tiene el formato aplicado.`;
+            if (fileId) {
+                // Actualizar documento existente
+                await drive.files.update({
+                    fileId,
+                    media: {
+                        mimeType: 'text/html',
+                        body: contentHtml,
+                    },
+                });
+                return `✅ Documento '${fileId}' actualizado con éxito.`;
+            } else {
+                // Crear nuevo documento
+                const res = await drive.files.create({
+                    requestBody: {
+                        name: name || 'Documento sin título',
+                        mimeType: 'application/vnd.google-apps.document',
+                    },
+                    media: {
+                        mimeType: 'text/html',
+                        body: contentHtml,
+                    },
+                });
+                return `✅ Documento de Google Docs '${res.data.name}' creado con éxito (ID: ${res.data.id}).`;
+            }
         } catch (error: any) {
-            return `Error al crear Google Doc: ${error.message}`;
+            return `Error en Google Docs: ${error.message}`;
         }
     }
 };
