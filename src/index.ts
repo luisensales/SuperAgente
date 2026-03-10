@@ -11,18 +11,18 @@ async function main() {
     const server = http.createServer((req, res) => {
         const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
-        if (url.pathname === '/google/callback') {
+        if (url.pathname === '/google/callback' || url.pathname === '/google/callback/') {
             const code = url.searchParams.get('code');
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             if (code) {
                 res.end(`
-                    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+                    <div style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0faf0; height: 100vh;">
                         <h1>✅ Autorización casi lista</h1>
                         <p>Copia este código y envíaselo al bot en Telegram:</p>
-                        <div style="background: #f4f4f4; padding: 20px; border-radius: 8px; display: inline-block; font-family: monospace; font-size: 1.2em; border: 1px solid #ccc;">
+                        <div style="background: #eef; padding: 20px; border-radius: 8px; display: inline-block; font-family: monospace; font-size: 1.5em; border: 2px solid #2a5298;">
                             ${code}
                         </div>
-                        <p style="margin-top: 20px; color: #666;">Usa el comando: <code>/google_code ${code}</code></p>
+                        <p style="margin-top: 20px; color: #666;">Comando: <code>/google_code ${code}</code></p>
                     </div>
                 `);
             } else {
@@ -31,8 +31,8 @@ async function main() {
             return;
         }
 
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('SuperAgente is running!');
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('SuperAgente está activo y saludable! 🚀 (v1.2)');
     });
 
     server.listen(PORT, () => {
