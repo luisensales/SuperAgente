@@ -3,6 +3,7 @@ import { env } from '../config.js';
 import { runAgentIteration } from '../agent/agent.js';
 import { transcribeAudio } from '../llm/client.js';
 import fs from 'fs';
+import { memory } from '../db/memory.js';
 import { getAuthUrl, setTokensFromCode, isAuthorized } from '../lib/googleAuth.js';
 
 export const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
@@ -36,9 +37,18 @@ bot.command("google_code", async (ctx) => {
 
     try {
         await setTokensFromCode(code);
-        await ctx.reply("✅ ¡Cuenta de Google conectada con éxito! Ahora puedo acceder a tu Gmail y Calendario.");
+        await ctx.reply("✅ ¡Cuenta de Google conectada con éxito! Ahora puedo acceder a tu Gmail, Calendario y Drive.");
     } catch (error: any) {
         await ctx.reply(`❌ Error al conectar cuenta: ${error.message}`);
+    }
+});
+
+bot.command("clear_memory", async (ctx) => {
+    try {
+        await memory.clearMemory();
+        await ctx.reply("🧹 Memoria limpiada con éxito. Empezamos de cero.");
+    } catch (error: any) {
+        await ctx.reply(`❌ Error al limpiar memoria: ${error.message}`);
     }
 });
 
