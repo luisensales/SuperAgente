@@ -428,6 +428,44 @@ export const writeDriveFileTool: Tool = {
     }
 };
 
+// --- Drive: Create Google Doc (Formatted) ---
+export const createGoogleDocTool: Tool = {
+    name: "create_google_doc",
+    description: "Crea un Documento de Google (Google Doc) con formato (negritas, títulos, listas).",
+    parameters: {
+        type: "object",
+        properties: {
+            name: { type: "string", description: "Nombre del documento." },
+            contentHtml: { type: "string", description: "Contenido del documento en formato HTML (puedes usar <b>, <h1>, <ul>, etc)." }
+        },
+        required: ["name", "contentHtml"]
+    },
+    execute: async ({ name, contentHtml }) => {
+        if (!await isAuthorized()) return "Error: Autorización requerida.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const drive = google.drive({ version: 'v3', auth });
+
+            // Al subir contenido como text/html y pedir el mimeType de Google Doc, Google lo convierte automáticamente
+            const res = await drive.files.create({
+                requestBody: {
+                    name: name,
+                    mimeType: 'application/vnd.google-apps.document',
+                },
+                media: {
+                    mimeType: 'text/html',
+                    body: contentHtml,
+                },
+            });
+
+            return `✅ Documento de Google Docs '${name}' creado con éxito (ID: ${res.data.id}). Ya tiene el formato aplicado.`;
+        } catch (error: any) {
+            return `Error al crear Google Doc: ${error.message}`;
+        }
+    }
+};
+
 // Register tools
 registerTool(listGmailMessagesTool);
 registerTool(listCalendarEventsTool);
@@ -439,3 +477,4 @@ registerTool(updateCalendarEventTool);
 registerTool(listDriveFilesTool);
 registerTool(readDriveFileTool);
 registerTool(writeDriveFileTool);
+registerTool(createGoogleDocTool);
