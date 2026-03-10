@@ -93,6 +93,97 @@ export const listCalendarEventsTool: Tool = {
     }
 };
 
+// --- Gmail: Send Email ---
+export const sendGmailEmailTool: Tool = {
+    name: "send_gmail_email",
+    description: "Envía un correo electrónico desde tu cuenta de Gmail.",
+    parameters: {
+        type: "object",
+        properties: {
+            to: { type: "string", description: "Dirección de correo del destinatario." },
+            subject: { type: "string", description: "Asunto del correo." },
+            body: { type: "string", description: "Cuerpo del mensaje." }
+        },
+        required: ["to", "subject", "body"]
+    },
+    execute: async ({ to, subject, body }) => {
+        if (!await isAuthorized()) return "Error: El usuario no ha autorizado el acceso a Google. Pide al usuario que use el comando /auth_google.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const gmail = google.gmail({ version: 'v1', auth });
+
+            // Gmail requires raw RFC822 messages encoded in base64url
+            const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+            const messageParts = [
+                `To: ${to}`,
+                'Content-Type: text/plain; charset=utf-8',
+                'MIME-Version: 1.0',
+                `Subject: ${utf8Subject}`,
+                '',
+                body,
+            ];
+            const message = messageParts.join('\n');
+            const encodedMessage = Buffer.from(message)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            await gmail.users.messages.send({
+                userId: 'me',
+                requestBody: {
+                    raw: encodedMessage,
+                },
+            });
+
+            return `✅ Correo enviado con éxito a ${to}.`;
+        } catch (error: any) {
+            return `Error al enviar correo: ${error.message}`;
+        }
+    }
+};
+
+// --- Calendar: Create Event ---
+export const createCalendarEventTool: Tool = {
+    name: "create_calendar_event",
+    description: "Crea un nuevo evento en tu calendario de Google.",
+    parameters: {
+        type: "object",
+        properties: {
+            summary: { type: "string", description: "Título del evento." },
+            description: { type: "string", description: "Descripción opcional." },
+            start: { type: "string", description: "Fecha y hora de inicio (formato ISO, ej: 2024-03-10T15:00:00)." },
+            end: { type: "string", description: "Fecha y hora de fin (formato ISO)." }
+        },
+        required: ["summary", "start", "end"]
+    },
+    execute: async ({ summary, description, start, end }) => {
+        if (!await isAuthorized()) return "Error: El usuario no ha autorizado el acceso a Google. Pide al usuario que use el comando /auth_google.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const calendar = google.calendar({ version: 'v3', auth });
+
+            await calendar.events.insert({
+                calendarId: 'primary',
+                requestBody: {
+                    summary,
+                    description,
+                    start: { dateTime: start, timeZone: 'Europe/Madrid' },
+                    end: { dateTime: end, timeZone: 'Europe/Madrid' },
+                },
+            });
+
+            return `✅ Evento '${summary}' creado con éxito en tu calendario.`;
+        } catch (error: any) {
+            return `Error al crear evento: ${error.message}`;
+        }
+    }
+};
+
 // Register tools
 registerTool(listGmailMessagesTool);
 registerTool(listCalendarEventsTool);
+registerTool(sendGmailEmailTool);
+registerTool(createCalendarEventTool);

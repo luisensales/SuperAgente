@@ -3,9 +3,10 @@ import { env } from '../config.js';
 import { memory } from '../db/memory.js';
 
 const SCOPES = [
+    'https://www.googleapis.com/auth/gmail.send',
     'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/calendar.events',
     'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/drive.metadata.readonly'
 ];
 
 const TOKEN_KEY = 'google_tokens';
