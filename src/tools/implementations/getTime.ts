@@ -11,6 +11,7 @@ export const getTimeTool: Tool = {
         const now = new Date();
         // Return a formatted timestamp
         return now.toLocaleString('es-ES', {
+            timeZone: 'Europe/Madrid',
             timeZoneName: 'short',
             weekday: 'long',
             year: 'numeric',

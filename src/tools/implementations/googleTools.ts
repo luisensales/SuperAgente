@@ -68,8 +68,22 @@ export const listCalendarEventsTool: Tool = {
             if (events.length === 0) return "No tienes eventos próximos.";
 
             const eventList = events.map(event => {
-                const start = event.start?.dateTime || event.start?.date;
-                return `- **${event.summary}** (${start})`;
+                const startRaw = event.start?.dateTime || event.start?.date;
+                let startStr = startRaw;
+
+                if (startRaw) {
+                    const date = new Date(startRaw);
+                    startStr = date.toLocaleString('es-ES', {
+                        timeZone: 'Europe/Madrid',
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                return `- **${event.summary}** (${startStr})`;
             });
 
             return `Próximos eventos:\n${eventList.join('\n')}`;
