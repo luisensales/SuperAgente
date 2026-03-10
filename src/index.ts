@@ -31,8 +31,15 @@ async function main() {
             return;
         }
 
+        if (url.pathname === '/' || url.pathname === '') {
+            console.log('💓 Ping de salud recibido (Keep-alive)');
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('SuperAgente está activo y saludable! 🚀 (v1.2)');
+            return;
+        }
+
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end('SuperAgente está activo y saludable! 🚀 (v1.2)');
+        res.end('Ruta no encontrada');
     });
 
     server.listen(PORT, () => {
