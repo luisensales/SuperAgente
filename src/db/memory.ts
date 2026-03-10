@@ -33,6 +33,12 @@ class MemoryDB {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS kv (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
     }
 
     private initFirestore() {
@@ -101,6 +107,55 @@ class MemoryDB {
       ) ORDER BY timestamp ASC`
         );
         return stmt.all(limit) as ChatMessage[];
+    }
+
+    public async set(key: string, value: any) {
+        const stringValue = JSON.stringify(value);
+        // SQLite
+        const stmt = this.db.prepare(`INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)`);
+        stmt.run(key, stringValue);
+
+        // Firestore
+        if (this.initializedFirestore && this.firestore) {
+            try {
+                await this.firestore.collection('config').doc(key).set({
+                    value: stringValue,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) {
+                console.error(`Error setting KV in Firestore (${key}):`, error);
+            }
+        }
+    }
+
+    public async get(key: string): Promise<any | null> {
+        // Try local SQLite first
+        const stmt = this.db.prepare(`SELECT value FROM kv WHERE key = ?`);
+        const row = stmt.get(key) as { value: string } | undefined;
+
+        if (row) {
+            return JSON.parse(row.value);
+        }
+
+        // Try Firestore if not in local
+        if (this.initializedFirestore && this.firestore) {
+            try {
+                const doc = await this.firestore.collection('config').doc(key).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data?.value) {
+                        // Update local cache
+                        const insertStmt = this.db.prepare(`INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)`);
+                        insertStmt.run(key, data.value);
+                        return JSON.parse(data.value);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error getting KV from Firestore (${key}):`, error);
+            }
+        }
+
+        return null;
     }
 
     public async clearMemory() {

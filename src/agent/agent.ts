@@ -3,12 +3,15 @@ import { chatCompletion } from '../llm/client.js';
 import { getToolsForLLM, getTool } from '../tools/registry.js';
 // Import to ensure tool is registered
 import '../tools/implementations/getTime.js';
+import '../tools/implementations/googleTools.js';
 
 const SYSTEM_PROMPT = `
 Eres SuperAgente, mi asistente de IA personal. 
 Responde de forma clara, directa, y útil. 
 Te comunicas en español. 
-Tienes acceso a herramientas, úsalas si lo necesitas.
+Tienes acceso a herramientas, incluyendo lectura de Gmail y calendario.
+Si el usuario te pide algo de Google y las herramientas te indican que no hay autorización, 
+pídele amablemente que use el comando /auth_google para conectar su cuenta.
 `;
 
 const MAX_ITERATIONS = 5;

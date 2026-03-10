@@ -3,6 +3,7 @@ import { env } from '../config.js';
 import { runAgentIteration } from '../agent/agent.js';
 import { transcribeAudio } from '../llm/client.js';
 import fs from 'fs';
+import { getAuthUrl, setTokensFromCode, isAuthorized } from '../lib/googleAuth.js';
 
 export const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
@@ -17,6 +18,28 @@ bot.use(async (ctx, next) => {
 
 bot.command("start", async (ctx) => {
     await ctx.reply("¡Hola! Soy SuperAgente, tu asistente de IA personal. ¿En qué te puedo ayudar hoy?");
+});
+
+bot.command("auth_google", async (ctx) => {
+    try {
+        const url = await getAuthUrl();
+        await ctx.reply(`Para conectar tu cuenta de Google, abre este enlace, autoriza la aplicación y luego envíame el código que te devuelva:\n\n${url}`);
+    } catch (error: any) {
+        await ctx.reply(`Error al generar URL de autorización: ${error.message}`);
+    }
+});
+
+// Command to receive the code
+bot.command("google_code", async (ctx) => {
+    const code = ctx.match;
+    if (!code) return ctx.reply("Por favor, usa el formato: /google_code [tu_codigo]");
+
+    try {
+        await setTokensFromCode(code);
+        await ctx.reply("✅ ¡Cuenta de Google conectada con éxito! Ahora puedo acceder a tu Gmail y Calendario.");
+    } catch (error: any) {
+        await ctx.reply(`❌ Error al conectar cuenta: ${error.message}`);
+    }
 });
 
 // Voice message handler
