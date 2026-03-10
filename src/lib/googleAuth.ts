@@ -18,8 +18,7 @@ export async function getOAuth2Client() {
     const oauth2Client = new google.auth.OAuth2(
         env.GOOGLE_CLIENT_ID,
         env.GOOGLE_CLIENT_SECRET,
-        // We'll determine the redirect URI dynamically or use a configured one
-        process.env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 8080}/google/callback`
+        env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 8080}/google/callback`
     );
 
     const tokens = await memory.get(TOKEN_KEY);
