@@ -182,8 +182,127 @@ export const createCalendarEventTool: Tool = {
     }
 };
 
+// --- Gmail: Create Draft ---
+export const createGmailDraftTool: Tool = {
+    name: "create_gmail_draft",
+    description: "Crea un borrador de correo electrónico en Gmail sin enviarlo.",
+    parameters: {
+        type: "object",
+        properties: {
+            to: { type: "string", description: "Dirección de correo del destinatario." },
+            subject: { type: "string", description: "Asunto del borrador." },
+            body: { type: "string", description: "Cuerpo del mensaje." }
+        },
+        required: ["to", "subject", "body"]
+    },
+    execute: async ({ to, subject, body }) => {
+        if (!await isAuthorized()) return "Error: El usuario no ha autorizado el acceso a Google. Pide al usuario que use el comando /auth_google.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const gmail = google.gmail({ version: 'v1', auth });
+
+            const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+            const messageParts = [
+                `To: ${to}`,
+                'Content-Type: text/plain; charset=utf-8',
+                'MIME-Version: 1.0',
+                `Subject: ${utf8Subject}`,
+                '',
+                body,
+            ];
+            const message = messageParts.join('\n');
+            const encodedMessage = Buffer.from(message)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            await gmail.users.drafts.create({
+                userId: 'me',
+                requestBody: {
+                    message: {
+                        raw: encodedMessage,
+                    },
+                },
+            });
+
+            return `✅ Borrador creado con éxito para ${to}. Puedes revisarlo en tu carpeta de borradores de Gmail.`;
+        } catch (error: any) {
+            return `Error al crear borrador: ${error.message}`;
+        }
+    }
+};
+
+// --- Calendar: Delete Event ---
+export const deleteCalendarEventTool: Tool = {
+    name: "delete_calendar_event",
+    description: "Elimina un evento del calendario de Google usando su ID o buscando por título.",
+    parameters: {
+        type: "object",
+        properties: {
+            eventId: { type: "string", description: "El ID del evento a eliminar." },
+        },
+        required: ["eventId"]
+    },
+    execute: async ({ eventId }) => {
+        if (!await isAuthorized()) return "Error: El usuario no ha autorizado el acceso a Google.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const calendar = google.calendar({ version: 'v3', auth });
+            await calendar.events.delete({ calendarId: 'primary', eventId });
+            return `✅ Evento con ID ${eventId} eliminado con éxito.`;
+        } catch (error: any) {
+            return `Error al eliminar evento: ${error.message}`;
+        }
+    }
+};
+
+// --- Calendar: Update Event ---
+export const updateCalendarEventTool: Tool = {
+    name: "update_calendar_event",
+    description: "Actualiza un evento existente en Google Calendar.",
+    parameters: {
+        type: "object",
+        properties: {
+            eventId: { type: "string", description: "ID del evento a actualizar." },
+            summary: { type: "string", description: "Nuevo título del evento." },
+            start: { type: "string", description: "Nueva fecha/hora inicio (ISO)." },
+            end: { type: "string", description: "Nueva fecha/hora fin (ISO)." }
+        },
+        required: ["eventId"]
+    },
+    execute: async ({ eventId, summary, start, end }) => {
+        if (!await isAuthorized()) return "Error: Autorización requerida.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const calendar = google.calendar({ version: 'v3', auth });
+
+            const event: any = {};
+            if (summary) event.summary = summary;
+            if (start) event.start = { dateTime: start, timeZone: 'Europe/Madrid' };
+            if (end) event.end = { dateTime: end, timeZone: 'Europe/Madrid' };
+
+            await calendar.events.patch({
+                calendarId: 'primary',
+                eventId,
+                requestBody: event
+            });
+
+            return `✅ Evento actualizado con éxito.`;
+        } catch (error: any) {
+            return `Error al actualizar evento: ${error.message}`;
+        }
+    }
+};
+
 // Register tools
 registerTool(listGmailMessagesTool);
 registerTool(listCalendarEventsTool);
 registerTool(sendGmailEmailTool);
 registerTool(createCalendarEventTool);
+registerTool(createGmailDraftTool);
+registerTool(deleteCalendarEventTool);
+registerTool(updateCalendarEventTool);
