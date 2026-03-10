@@ -298,6 +298,136 @@ export const updateCalendarEventTool: Tool = {
     }
 };
 
+// --- Drive: List Files ---
+export const listDriveFilesTool: Tool = {
+    name: "list_drive_files",
+    description: "Lista o busca archivos en Google Drive.",
+    parameters: {
+        type: "object",
+        properties: {
+            query: { type: "string", description: "Consulta opcional para buscar por nombre (ej: name contains 'factura')." },
+            maxResults: { type: "number", description: "Número máximo de archivos a listar (por defecto 10)." }
+        },
+    },
+    execute: async ({ query, maxResults = 10 }) => {
+        if (!await isAuthorized()) return "Error: Autorización de Google requerida. Usa /auth_google.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const drive = google.drive({ version: 'v3', auth });
+            const res = await drive.files.list({
+                pageSize: maxResults,
+                q: query,
+                fields: 'files(id, name, mimeType)',
+            });
+
+            const files = res.data.files || [];
+            if (files.length === 0) return "No se encontraron archivos en Drive.";
+
+            const fileList = files.map(f => `- **${f.name}** (ID: ${f.id}, Tipo: ${f.mimeType})`);
+            return `Archivos encontrados:\n${fileList.join('\n')}`;
+        } catch (error: any) {
+            return `Error en Drive: ${error.message}`;
+        }
+    }
+};
+
+// --- Drive: Read File ---
+export const readDriveFileTool: Tool = {
+    name: "read_drive_file",
+    description: "Lee el contenido de un archivo de texto o un documento de Google de Drive.",
+    parameters: {
+        type: "object",
+        properties: {
+            fileId: { type: "string", description: "ID del archivo a leer." },
+            mimeType: { type: "string", description: "Tipo MIME (opcional). Los Google Docs se exportarán a texto plano." }
+        },
+        required: ["fileId"]
+    },
+    execute: async ({ fileId, mimeType }) => {
+        if (!await isAuthorized()) return "Error: Autorización requerida.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const drive = google.drive({ version: 'v3', auth });
+
+            // Identificar si es un documento de Google (Doc, Sheet, etc) para exportarlo
+            const meta = await drive.files.get({ fileId, fields: 'name, mimeType' });
+            const type = meta.data.mimeType || '';
+
+            if (type.startsWith('application/vnd.google-apps.')) {
+                // Exportar documentos de Google a texto plano
+                const exportType = type.includes('spreadsheet') ? 'text/csv' : 'text/plain';
+                const res = await drive.files.export({
+                    fileId,
+                    mimeType: exportType,
+                });
+                return `Contenido de '${meta.data.name}':\n\n${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`;
+            } else {
+                // Leer archivo normal (txt, etc)
+                const res = await drive.files.get({
+                    fileId,
+                    alt: 'media',
+                });
+                return `Contenido de '${meta.data.name}':\n\n${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`;
+            }
+        } catch (error: any) {
+            return `Error al leer archivo: ${error.message}`;
+        }
+    }
+};
+
+// --- Drive: Write/Update File ---
+export const writeDriveFileTool: Tool = {
+    name: "write_drive_file",
+    description: "Crea o actualiza un archivo de texto en Google Drive.",
+    parameters: {
+        type: "object",
+        properties: {
+            name: { type: "string", description: "Nombre del archivo (para crear uno nuevo)." },
+            fileId: { type: "string", description: "ID del archivo (para actualizar uno existente)." },
+            content: { type: "string", description: "Contenido de texto a escribir." },
+            mimeType: { type: "string", description: "Tipo MIME (por defecto text/plain)." }
+        },
+        required: ["content"]
+    },
+    execute: async ({ name, fileId, content, mimeType = 'text/plain' }) => {
+        if (!await isAuthorized()) return "Error: Autorización requerida.";
+
+        try {
+            const auth = await getOAuth2Client();
+            const drive = google.drive({ version: 'v3', auth });
+
+            if (fileId) {
+                // Actualizar archivo existente
+                await drive.files.update({
+                    fileId,
+                    media: {
+                        mimeType,
+                        body: content,
+                    },
+                });
+                return `✅ Archivo '${fileId}' actualizado con éxito.`;
+            } else {
+                // Crear nuevo archivo
+                const res = await drive.files.create({
+                    requestBody: {
+                        name: name || 'Nuevo archivo.txt',
+                        mimeType,
+                    },
+                    media: {
+                        mimeType,
+                        body: content,
+                    },
+                });
+                return `✅ Archivo '${res.data.name}' creado con éxito (ID: ${res.data.id}).`;
+            }
+        } catch (error: any) {
+            return `Error al escribir en Drive: ${error.message}`;
+        }
+    }
+};
+
 // Register tools
 registerTool(listGmailMessagesTool);
 registerTool(listCalendarEventsTool);
@@ -306,3 +436,6 @@ registerTool(createCalendarEventTool);
 registerTool(createGmailDraftTool);
 registerTool(deleteCalendarEventTool);
 registerTool(updateCalendarEventTool);
+registerTool(listDriveFilesTool);
+registerTool(readDriveFileTool);
+registerTool(writeDriveFileTool);
